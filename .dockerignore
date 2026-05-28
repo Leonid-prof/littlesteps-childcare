@@ -1,0 +1,19 @@
+# Exclude local directories
+.venv/
+__pycache__/
+.git/
+.gitignore
+Dockerfile
+.dockerignore
+deploy_to_github.py
+push_now.py
+push_update.py
+push_readme.py
+
+# Exclude local database
+*.db
+*.sqlite3
+
+# Exclude uv tools
+uv
+uv.tar.gz
