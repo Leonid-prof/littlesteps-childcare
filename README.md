@@ -30,6 +30,11 @@ LittleSteps is a premium, modern **Python Streamlit** childcare and parenting pl
   - Dynamic completion progress bar.
   - Color-coded highlighting flagging current due/upcoming vaccinations.
 
+- **📈 Growth & BMI Percentile Tracker**
+  - Evaluates child's height, weight, and Body Mass Index (BMI).
+  - Categorizes BMI based on pediatric health standards (Healthy weight, Underweight, Overweight, Obese).
+  - Plots dynamic WHO/CDC standard growth percentile curves (5th, 50th, 95th percentiles) from 0 to 60 months using line charts.
+
 - **✍️ Content Creator Admin Console**
   - Unlocked via the passcode: `admin`.
   - Add new articles dynamically with categories, tags, images, read times, and authors.
