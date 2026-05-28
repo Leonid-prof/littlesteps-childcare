@@ -302,10 +302,11 @@ def show_resources_page():
     else:
         st.write("Welcome to your toolkit. Add a child profile in the sidebar to unlock personalized tracking!")
 
-    tab_milestones, tab_activities, tab_immunization, tab_guides = st.tabs([
+    tab_milestones, tab_activities, tab_immunization, tab_growth, tab_guides = st.tabs([
         "👶 Milestone Tracker", 
         "🧩 Daily Activity Planner", 
         "💉 Immunization Tracker",
+        "📈 Growth Tracker",
         "📚 Printable Guides"
     ])
     
@@ -554,7 +555,167 @@ def show_resources_page():
                 
                 st.write("")
 
-    # TAB 4: Printable Guides
+    # TAB 4: Growth Tracker
+    with tab_growth:
+        st.subheader("Child Growth & BMI Percentile Calculator")
+        st.write("Evaluate your child's height, weight, and Body Mass Index (BMI) compared to WHO/CDC standard percentiles for ages 0 to 5 years.")
+        
+        # Form layout
+        col_g1, col_g2, col_g3 = st.columns(3)
+        with col_g1:
+            g_sex = st.selectbox("Child's Sex", ["Boy", "Girl"])
+        with col_g2:
+            default_age = 12
+            if active_child:
+                default_age = min(st.session_state.active_child_age_months, 60)
+            g_age = st.number_input("Child's Age (in Months)", min_value=0, max_value=60, value=default_age)
+        with col_g3:
+            tracking_type = st.radio("Chart Type", ["Height", "Weight"], horizontal=True)
+            
+        col_g4, col_g5 = st.columns(2)
+        with col_g4:
+            g_height = st.number_input("Height (in cm)", min_value=30.0, max_value=150.0, value=75.0, step=0.5)
+        with col_g5:
+            g_weight = st.number_input("Weight (in kg)", min_value=1.0, max_value=40.0, value=10.0, step=0.1)
+            
+        # Calculation and Lookup Database
+        growth_standards = {
+            "Boy": {
+                "height": {
+                    0: (46.1, 49.9, 53.7),
+                    6: (63.6, 67.6, 71.6),
+                    12: (71.0, 75.7, 80.5),
+                    18: (76.9, 82.3, 87.7),
+                    24: (82.1, 87.8, 93.6),
+                    36: (89.9, 96.1, 102.3),
+                    48: (96.5, 103.3, 110.1),
+                    60: (102.3, 110.0, 117.7)
+                },
+                "weight": {
+                    0: (2.4, 3.3, 4.3),
+                    6: (6.4, 7.9, 9.8),
+                    12: (7.8, 9.6, 12.0),
+                    18: (8.8, 10.9, 13.7),
+                    24: (9.7, 12.2, 15.3),
+                    36: (11.3, 14.3, 18.3),
+                    48: (12.7, 16.3, 21.2),
+                    60: (14.1, 18.3, 24.2)
+                }
+            },
+            "Girl": {
+                "height": {
+                    0: (45.4, 49.1, 52.9),
+                    6: (61.5, 65.7, 69.9),
+                    12: (68.9, 74.0, 79.2),
+                    18: (74.9, 80.7, 86.5),
+                    24: (80.0, 86.4, 92.9),
+                    36: (88.4, 95.1, 101.8),
+                    48: (95.0, 102.7, 110.4),
+                    60: (100.9, 109.4, 117.9)
+                },
+                "weight": {
+                    0: (2.3, 3.2, 4.2),
+                    6: (5.7, 7.3, 9.3),
+                    12: (7.0, 8.9, 11.5),
+                    18: (8.1, 10.2, 13.0),
+                    24: (9.0, 11.5, 14.8),
+                    36: (10.8, 13.9, 18.1),
+                    48: (12.3, 16.1, 21.2),
+                    60: (13.7, 18.2, 24.4)
+                }
+            }
+        }
+        
+        import numpy as np
+        def interpolate_stat(age, stat_dict):
+            ages = sorted(stat_dict.keys())
+            p5_vals = [stat_dict[a][0] for a in ages]
+            p50_vals = [stat_dict[a][1] for a in ages]
+            p95_vals = [stat_dict[a][2] for a in ages]
+            
+            p5 = float(np.interp(age, ages, p5_vals))
+            p50 = float(np.interp(age, ages, p50_vals))
+            p95 = float(np.interp(age, ages, p95_vals))
+            return p5, p50, p95
+
+        p5_h, p50_h, p95_h = interpolate_stat(g_age, growth_standards[g_sex]["height"])
+        p5_w, p50_w, p95_w = interpolate_stat(g_age, growth_standards[g_sex]["weight"])
+        
+        # BMI Calculation
+        height_m = g_height / 100.0
+        bmi = g_weight / (height_m * height_m)
+        
+        # BMI evaluation (Standard pediatric guidelines for ages 2+)
+        if g_age >= 24:
+            if bmi < 14.0:
+                bmi_cat = "Underweight"
+                bmi_color = "#E3A086"
+            elif bmi < 18.0:
+                bmi_cat = "Healthy Weight"
+                bmi_color = "#5A7F71"
+            elif bmi < 20.0:
+                bmi_cat = "Overweight"
+                bmi_color = "#D4A373"
+            else:
+                bmi_cat = "Obese"
+                bmi_color = "#D98A6C"
+        else:
+            # Under 2 years old: WHO weight-for-length is used, here we simplify
+            if bmi < 15.0:
+                bmi_cat = "Slightly Underweight (Under 2 years)"
+                bmi_color = "#E3A086"
+            elif bmi < 19.5:
+                bmi_cat = "Healthy Weight (Under 2 years)"
+                bmi_color = "#5A7F71"
+            else:
+                bmi_cat = "Slightly Overweight (Under 2 years)"
+                bmi_color = "#D4A373"
+                
+        # Compare current values to percentiles
+        cur_val = g_height if tracking_type == "Height" else g_weight
+        p5_val = p5_h if tracking_type == "Height" else p5_w
+        p50_val = p50_h if tracking_type == "Height" else p50_w
+        p95_val = p95_h if tracking_type == "Height" else p95_w
+        
+        if cur_val < p5_val:
+            perc_status = "Below 5th Percentile (Slower growth)"
+        elif cur_val < p50_val:
+            perc_status = "5th to 50th Percentile (Below average)"
+        elif cur_val < p95_val:
+            perc_status = "50th to 95th Percentile (Above average)"
+        else:
+            perc_status = "Above 95th Percentile (Faster growth)"
+            
+        # Display stats cards
+        col_res1, col_res2, col_res3 = st.columns(3)
+        with col_res1:
+            st.metric(label="Calculated BMI", value=f"{bmi:.1f}")
+        with col_res2:
+            st.markdown(f"<div style='background-color: white; border-radius: 8px; padding: 0.6rem 1.2rem; border-left: 4px solid {bmi_color}; box-shadow: 0 2px 8px rgba(0,0,0,0.02);'><strong>BMI Category</strong><br><span style='color:{bmi_color}; font-weight:bold;'>{bmi_cat}</span></div>", unsafe_allow_html=True)
+        with col_res3:
+            st.markdown(f"<div style='background-color: white; border-radius: 8px; padding: 0.6rem 1.2rem; border-left: 4px solid #5A7F71; box-shadow: 0 2px 8px rgba(0,0,0,0.02);'><strong>{tracking_type} Category</strong><br><span style='color:#3F5B50; font-weight:bold;'>{perc_status}</span></div>", unsafe_allow_html=True)
+            
+        st.write("")
+        st.write(f"**Growth Percentile Curve for {g_sex}s (0-60 Months) against '{tracking_type}'**:")
+        
+        # Build Growth Chart data
+        import pandas as pd
+        curve_data = []
+        for month in range(0, 61, 2):
+            h5, h50, h95 = interpolate_stat(month, growth_standards[g_sex]["height"])
+            w5, w50, w95 = interpolate_stat(month, growth_standards[g_sex]["weight"])
+            
+            curve_data.append({
+                "Age (Months)": month,
+                "5th Percentile": h5 if tracking_type == "Height" else w5,
+                "Median (50th)": h50 if tracking_type == "Height" else w50,
+                "95th Percentile": h95 if tracking_type == "Height" else w95
+            })
+            
+        df_curves = pd.DataFrame(curve_data).set_index("Age (Months)")
+        st.line_chart(df_curves)
+
+    # TAB 5: Printable Guides
     with tab_guides:
         st.subheader("Downloadable Clinical Resources")
         st.write("Save these professional cheatsheets to your device or print them out for easy access:")
